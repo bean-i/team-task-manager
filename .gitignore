@@ -1,0 +1,19 @@
+# macOS
+.DS_Store
+
+# dotenv
+*.env
+
+# backend (Rails)
+/backend/log/*
+/backend/tmp/*
+/backend/db/*.sqlite3
+/backend/db/*.sqlite3-journal
+/backend/vendor
+/backend/.env
+/backend/.byebug_history
+
+# frontend (Vue/Vite)
+/frontend/node_modules
+/frontend/dist
+/frontend/.env
