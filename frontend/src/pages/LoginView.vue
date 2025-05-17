@@ -1,19 +1,25 @@
-<!-- src/views/LoginView.vue -->
 <template lang="pug">
 .login-container
   .login-card
     h1.login-title ログイン
     
     form(@submit.prevent="handleLogin")
+      .error-banner(v-if="authStore.error")
+        span.error-icon ⚠️
+        span.error-text {{ authStore.error }}
+      
       .form-group
         label(for="email") メールアドレス
         input(
           type="email"
           id="email"
           v-model="email"
+          :class="{ 'error': emailError }"
           placeholder="例：sample@example.com"
           required
+          @input="validateEmail"
         )
+        .field-error(v-if="emailError") {{ emailError }}
       
       .form-group
         label(for="password") パスワード
@@ -21,13 +27,16 @@
           type="password"
           id="password"
           v-model="password"
+          :class="{ 'error': passwordError }"
           placeholder="例：8文字以上の英数字・記号"
           required
+          @input="validatePassword"
         )
+        .field-error(v-if="passwordError") {{ passwordError }}
       
       SubmitButton(
-        :label="'ログイン'"
-        :disabled="!isFormValid"
+        :label="authStore.loading ? 'ログイン中...' : 'ログイン'"
+        :disabled="!isFormValid || authStore.loading"
         @click="handleLogin"
       )
       
@@ -38,6 +47,8 @@
 
 <script>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
 import SubmitButton from '../components/SubmitButton.vue'
 
 export default {
@@ -48,20 +59,60 @@ export default {
   setup() {
     const email = ref('')
     const password = ref('')
+    const emailError = ref('')
+    const passwordError = ref('')
+    const router = useRouter()
+    const authStore = useAuthStore()
+
+    const validateEmail = () => {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!email.value) {
+        emailError.value = 'メールアドレスを入力してください'
+      } else if (!emailRegex.test(email.value)) {
+        emailError.value = '有効なメールアドレスを入力してください'
+      } else {
+        emailError.value = ''
+      }
+    }
+
+    const validatePassword = () => {
+      if (!password.value) {
+        passwordError.value = 'パスワードを入力してください'
+      } else if (password.value.length < 8) {
+        passwordError.value = 'パスワードは8文字以上で入力してください'
+      } else {
+        passwordError.value = ''
+      }
+    }
 
     const isFormValid = computed(() => {
-      return email.value.trim() !== '' && password.value.trim() !== ''
+      return email.value && 
+             password.value && 
+             !emailError.value && 
+             !passwordError.value
     })
 
-    const handleLogin = () => {
-      console.log('ログイン処理:', email.value, password.value)
+    const handleLogin = async () => {
+      validateEmail()
+      validatePassword()
+      
+      if (!isFormValid.value) return
+
+      if (await authStore.login(email.value, password.value)) {
+        router.push('/dashboard')
+      }
     }
 
     return {
       email,
       password,
+      emailError,
+      passwordError,
       isFormValid,
-      handleLogin
+      handleLogin,
+      validateEmail,
+      validatePassword,
+      authStore
     }
   }
 }
@@ -145,5 +196,41 @@ input::placeholder {
 
 .signup-link a:hover {
   text-decoration: underline;
+}
+
+.error-banner {
+  background-color: #fee2e2;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.error-icon {
+  font-size: 16px;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 14px;
+}
+
+.field-error {
+  color: #dc2626;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+input.error {
+  border-color: #dc2626;
+  background-color: #fef2f2;
+}
+
+input.error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 1px #dc2626;
 }
 </style>
