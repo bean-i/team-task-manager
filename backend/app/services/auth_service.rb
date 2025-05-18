@@ -5,7 +5,12 @@ class AuthService
     token = nil
 
     ActiveRecord::Base.transaction do
-      user = User.create!(params)
+      user = User.create!(
+        first_name: params[:first_name],
+        last_name: params[:last_name],
+        email: params[:email],
+        password: params[:password]
+      )
       token = JsonWebToken.encode(user_id: user.id)
     end
 

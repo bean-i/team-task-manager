@@ -1,8 +1,7 @@
 <template lang="pug">
 button.submit-button(
-  :class="{ disabled: disabled }"
+  type="submit"
   :disabled="disabled"
-  @click="$emit('click')"
 ) {{ label }}
 </template>
 
@@ -18,8 +17,7 @@ export default {
       type: Boolean,
       default: false
     }
-  },
-  emits: ['click']
+  }
 }
 </script>
 
@@ -27,22 +25,21 @@ export default {
 .submit-button {
   width: 100%;
   padding: 12px;
-  border: none;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.3s, opacity 0.3s;
-  color: white;
   background-color: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
 }
 
-.submit-button:hover:not(.disabled) {
+.submit-button:hover {
   background-color: #1d4ed8;
 }
 
-.submit-button.disabled {
-  background-color: #9ca3af;
+.submit-button:disabled {
+  background-color: #93c5fd;
   cursor: not-allowed;
 }
 </style>

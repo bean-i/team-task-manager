@@ -15,6 +15,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/signup',
+      name: 'signup',
+      component: () => import('../pages/SignupView.vue'),
+      meta: { requiresAuth: false }
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../pages/DashboardView.vue'),
@@ -23,7 +29,6 @@ const router = createRouter({
   ]
 })
 
-// 라우터 가드
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
 

@@ -36,6 +36,29 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async signup(userData) {
+      this.loading = true
+      this.error = null
+      
+      try {
+        const response = await authAPI.signup(userData)
+        if (response.data.status === 'success') {
+          const { user, token } = response.data.data
+          this.token = token
+          this.user = user
+          localStorage.setItem('token', token)
+          return true
+        } else {
+          throw new Error('Invalid response format')
+        }
+      } catch (error) {
+        this.error = error.response?.data?.message || 'ユーザー登録に失敗しました'
+        return false
+      } finally {
+        this.loading = false
+      }
+    },
+
     logout() {
       this.user = null
       this.token = null
