@@ -17,4 +17,7 @@ class User < ApplicationRecord
         message: "パスワードは8文字以上で、英字・数字・記号（! @ # % * のいずれか）をすべて含めてください"
     },
     if: -> { new_record? || !password.nil? }
+
+    has_many :users_workspaces
+    has_many :workspaces, through: :users_workspaces
 end
