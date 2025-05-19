@@ -2,30 +2,33 @@ class WorkspacesController < ApplicationController
   before_action :authenticate_user!
 
   def index
-    workspaces = WorkspaceService.list_workspaces(current_user)
-    
+    workspaces = current_user.workspaces
     render_success(
-      message: "ワークスペース一覧の取得に成功しました",
+      message: "ワークスペース一覧を取得しました",
       data: { workspaces: workspaces }
     )
   end
 
   def show
-    workspace = WorkspaceService.get_workspace_details(params[:id], current_user)
+    result = WorkspaceService.get_workspace_details(
+      params[:id],
+      current_user,
+      cursor: params[:cursor],
+      limit: params[:limit] || 10,
+      filters: filter_params.except(:id)
+    )
     
     render_success(
-      message: "ワークスペースの詳細取得に成功しました",
-      data: { workspace: workspace }
+      message: "ワークスペースの詳細を取得しました",
+      data: result
     )
   rescue StandardError => e
-    render_error(
-      message: e.message,
-      status: :forbidden
-    )
+    render_error(message: e.message)
   end
 
   def create
-    workspace = WorkspaceService.create_workspace(current_user, workspace_params)
+    workspace = Workspace.create!(workspace_params)
+    workspace.users << current_user 
     
     render_success(
       message: "ワークスペースを作成しました",
@@ -33,28 +36,27 @@ class WorkspacesController < ApplicationController
       status: :created
     )
   rescue StandardError => e
-    render_error(
-      message: e.message,
-      status: :unprocessable_entity
-    )
+    render_error(message: e.message)
   end
 
   def join
-    success = WorkspaceService.join_workspace(current_user, params[:id])
+    workspace = Workspace.find(params[:id])
+    workspace.users << current_user
     
-    if success
-      render_success(message: "ワークスペースに参加しました")
-    else
-      render_error(
-        message: "すでに参加しているワークスペースです",
-        status: :unprocessable_entity
-      )
-    end
+    render_success(message: "ワークスペースに参加しました")
+  rescue ActiveRecord::RecordNotUnique
+    render_error(message: "すでに参加しているワークスペースです")
+  rescue StandardError => e
+    render_error(message: e.message)
   end
 
   private
 
   def workspace_params
     params.require(:workspace).permit(:title)
+  end
+
+  def filter_params
+    params.permit(:status, :category, :user_id).to_h
   end
 end 

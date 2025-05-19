@@ -6,5 +6,6 @@ Rails.application.routes.draw do
     member do
       post :join
     end
+    resources :tasks, only: [:create, :update, :destroy]
   end
 end

@@ -36,14 +36,13 @@ class WorkspaceService
   DEFAULT_LIMIT = 10
 
   def self.get_workspace_details(workspace_id, user, cursor: nil, limit: DEFAULT_LIMIT, filters: {})
-
     workspace = Workspace.includes(:users).find(workspace_id)
     raise StandardError.new("ワークスペースにアクセスする権限がありません") unless workspace.users.include?(user)
     
     tasks_query = workspace.tasks.includes(:user)
     tasks_query = apply_filters(tasks_query, filters)
     tasks_query = apply_cursor_pagination(tasks_query, cursor)
-
+    
     tasks = tasks_query
       .order(created_at: :desc, id: :desc)
       .limit(limit + 1)
@@ -80,7 +79,7 @@ class WorkspaceService
 
   def self.apply_cursor_pagination(query, cursor)
     return query if cursor.blank?
-
+    
     cursor_data = decode_cursor(cursor)
     created_at = cursor_data[:created_at]
     last_id = cursor_data[:id]
