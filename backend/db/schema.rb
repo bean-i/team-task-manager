@@ -10,7 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_05_14_110825) do
+ActiveRecord::Schema[8.0].define(version: 2025_05_19_060200) do
+  create_table "tasks", force: :cascade do |t|
+    t.string "title", null: false
+    t.string "status", null: false
+    t.string "category", null: false
+    t.integer "user_id", null: false
+    t.integer "workspace_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_tasks_on_user_id"
+    t.index ["workspace_id"], name: "index_tasks_on_workspace_id"
+  end
+
   create_table "users", force: :cascade do |t|
     t.string "first_name"
     t.string "last_name"
@@ -19,4 +31,25 @@ ActiveRecord::Schema[8.0].define(version: 2025_05_14_110825) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
   end
+
+  create_table "users_workspaces", force: :cascade do |t|
+    t.integer "user_id", null: false
+    t.integer "workspace_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id", "workspace_id"], name: "index_users_workspaces_on_user_id_and_workspace_id", unique: true
+    t.index ["user_id"], name: "index_users_workspaces_on_user_id"
+    t.index ["workspace_id"], name: "index_users_workspaces_on_workspace_id"
+  end
+
+  create_table "workspaces", force: :cascade do |t|
+    t.string "title", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_foreign_key "tasks", "users"
+  add_foreign_key "tasks", "workspaces"
+  add_foreign_key "users_workspaces", "users"
+  add_foreign_key "users_workspaces", "workspaces"
 end
