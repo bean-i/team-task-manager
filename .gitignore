@@ -12,6 +12,7 @@
 /backend/vendor
 /backend/.env
 /backend/.byebug_history
+/backend/storage/
 
 # frontend (Vue/Vite)
 /frontend/node_modules
