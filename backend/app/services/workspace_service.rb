@@ -50,11 +50,16 @@ class WorkspaceService
     has_next = tasks.size > limit
     tasks = tasks.take(limit) if has_next
     
+    tasks_json = tasks.map do |task|
+      full_name = task.user ? "#{task.user.last_name} #{task.user.first_name}" : ""
+      task.as_json.merge('user' => full_name)
+    end
+    
     next_cursor = has_next ? encode_cursor(tasks.last) : nil
     
     {
-      workspace: workspace,
-      tasks: tasks,
+      workspace: workspace.as_json(include: { users: { only: [:id, :last_name, :first_name] } }),
+      tasks: tasks_json,
       filters: {
         available_categories: Task.categories.keys,
         available_statuses: Task.statuses.keys,
