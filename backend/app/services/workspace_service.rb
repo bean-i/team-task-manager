@@ -73,6 +73,51 @@ class WorkspaceService
     }
   end
 
+  def self.progress(workspace_id, user)
+    workspace = Workspace.includes(:tasks).find(workspace_id)
+    raise "Not authorized" unless workspace.users.include?(user)
+
+    all_tasks = workspace.tasks
+    done_tasks = all_tasks.where(status: 'completed')
+
+    my_tasks = all_tasks.where(user_id: user.id)
+    my_done = my_tasks.where(status: 'completed')
+
+    {
+      my_progress: {
+        done: my_done.count,
+        total: my_tasks.count,
+        percent: my_tasks.count > 0 ? (my_done.count * 100 / my_tasks.count) : 0
+      },
+      workspace_progress: {
+        done: done_tasks.count,
+        total: all_tasks.count,
+        percent: all_tasks.count > 0 ? (done_tasks.count * 100 / all_tasks.count) : 0
+      }
+    }
+  end
+
+  def self.member_progress(workspace_id, user)
+    workspace = Workspace.includes(:users, :tasks).find(workspace_id)
+    raise "Not authorized" unless workspace.users.include?(user)
+
+    all_tasks = workspace.tasks
+
+    members_progress = workspace.users.map do |member|
+      member_tasks = all_tasks.where(user_id: member.id)
+      member_done = member_tasks.where(status: 'completed')
+      {
+        id: member.id,
+        name: "#{member.last_name} #{member.first_name}",
+        done: member_done.count,
+        total: member_tasks.count,
+        percent: member_tasks.count > 0 ? (member_done.count * 100 / member_tasks.count) : 0
+      }
+    end
+
+    { members: members_progress }
+  end
+
   private
 
   def self.apply_filters(query, filters)

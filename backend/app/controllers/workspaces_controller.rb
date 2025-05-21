@@ -15,7 +15,7 @@ class WorkspacesController < ApplicationController
       current_user,
       cursor: params[:cursor],
       limit: params[:limit] || 10,
-      filters: filter_params.except(:id)
+      filters: filter_params
     )
     
     render_success(
@@ -50,6 +50,20 @@ class WorkspacesController < ApplicationController
     render_error(message: e.message)
   end
 
+  def progress
+    result = WorkspaceService.progress(params[:id], current_user)
+    render_success(message: "Progress info", data: result)
+  rescue => e
+    render_error(message: e.message)
+  end
+
+  def member_progress
+    result = WorkspaceService.member_progress(params[:id], current_user)
+    render_success(message: "Member progress info", data: result)
+  rescue => e
+    render_error(message: e.message)
+  end
+
   private
 
   def workspace_params
@@ -57,6 +71,6 @@ class WorkspacesController < ApplicationController
   end
 
   def filter_params
-    params.permit(:status, :category, :user_id).to_h
+    params.fetch(:filters, {}).permit(:status, :category, :user_id).to_h
   end
 end 
