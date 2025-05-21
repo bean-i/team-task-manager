@@ -5,6 +5,8 @@ Rails.application.routes.draw do
   resources :workspaces do
     member do
       post :join
+      get :progress
+      get :member_progress
     end
     resources :tasks, only: [:create, :update, :destroy]
   end
