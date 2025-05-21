@@ -14,15 +14,21 @@
       .task-add-bar
         button.add-task-btn(@click="showAddTaskModal = true") タスク追加
       .task-filters
-        select(v-model="filters.category")
-          option(value="") カテゴリー
-          option(v-for="cat in TASK_CATEGORIES" :key="cat" :value="cat") {{ cat }}
-        select(v-model="filters.status")
-          option(value="") ステータス
-          option(v-for="st in TASK_STATUSES" :key="st" :value="st") {{ st }}
-        select(v-model="filters.user_id")
-          option(value="") 担当者
-          option(v-for="user in members" :key="user.id" :value="user.id") {{ user.last_name + ' ' + user.first_name }}
+        .filter-group
+          span.filter-label カテゴリー
+          select(v-model="filters.category")
+            option(value="") すべて
+            option(v-for="cat in TASK_CATEGORIES" :key="cat" :value="cat") {{ cat }}
+        .filter-group
+          span.filter-label ステータス
+          select(v-model="filters.status")
+            option(value="") すべて
+            option(v-for="st in TASK_STATUSES" :key="st" :value="st") {{ st }}
+        .filter-group
+          span.filter-label 担当者
+          select(v-model="filters.user_id")
+            option(value="") すべて
+            option(v-for="user in members" :key="user.id" :value="user.id") {{ user.last_name + ' ' + user.first_name }}
       .task-table
         table
           thead
@@ -31,7 +37,7 @@
               th カテゴリー
               th ステータス
               th 担当者
-          tbody
+          transition-group(name="task-fade" tag="tbody")
             tr(v-for="task in tasks" :key="task.id")
               td {{ task.title }}
               td {{ translateCategory(task.category) }}
@@ -92,13 +98,17 @@ const fetchTasks = async (cursor = null, append = false) => {
     if (cursor) params.cursor = cursor
     const res = await api.get(`/workspaces/${selectedWorkspace.value.id}`, { params })
     const newTasks = res.data.data.tasks
+    console.log('newTasks:', newTasks)
     if (append) {
       const existingIds = new Set(tasks.value.map(t => t.id))
-      tasks.value = tasks.value.concat(newTasks.filter(t => !existingIds.has(t.id)))
+      const filtered = newTasks.filter(t => !existingIds.has(t.id))
+      console.log('filtered:', filtered)
+      tasks.value = tasks.value.concat(filtered)
     } else {
       tasks.value = newTasks
     }
-    nextCursor.value = res.data.data.pagination.next_cursor
+    nextCursor.value = res.data.data.pagination?.next_cursor
+    console.log('Next Cursor:', nextCursor.value)
     if (res.data.data.workspace && res.data.data.workspace.users) {
       members.value = res.data.data.workspace.users
     }
@@ -245,8 +255,32 @@ const onTaskAddSuccess = async () => {
 
 .task-filters {
   display: flex;
-  gap: 12px;
+  gap: 16px;
   margin-bottom: 16px;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.filter-label {
+  font-size: 14px;
+  font-weight: bold;
+  color: #4b5563;
+  margin-bottom: 2px;
+}
+
+.filter-group select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 14px;
+  height: 32px;
 }
 
 .task-table {
@@ -352,5 +386,17 @@ const onTaskAddSuccess = async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+}
+
+.task-fade-enter-active, .task-fade-leave-active {
+  transition: all 0.4s cubic-bezier(.55,0,.1,1);
+}
+.task-fade-enter-from, .task-fade-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.task-fade-enter-to, .task-fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 </style>
