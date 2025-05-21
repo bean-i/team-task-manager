@@ -1,20 +1,26 @@
 export const TASK_CATEGORIES = [
-  '企画', 'デザイン', 'フロントエンド', 'バックエンド', 'テスト'
+  { value: 'planning', label: '企画' },
+  { value: 'design', label: 'デザイン' },
+  { value: 'frontend', label: 'フロントエンド' },
+  { value: 'backend', label: 'バックエンド' },
+  { value: 'test', label: 'テスト' }
 ]
 
 export const TASK_STATUSES = [
-  '未着手', '進行中', '完了'
+  { value: 'not_started', label: '未着手' },
+  { value: 'in_progress', label: '進行中' },
+  { value: 'completed', label: '完了' }
 ]
 
-const CATEGORY_MAP = {
+export const CATEGORY_MAP = {
   'planning': '企画',
   'design': 'デザイン',
   'frontend': 'フロントエンド',
   'backend': 'バックエンド',
-  'testing': 'テスト'
+  'test': 'テスト'
 }
 
-const STATUS_MAP = {
+export const STATUS_MAP = {
   'not_started': '未着手',
   'in_progress': '進行中',
   'completed': '完了'
