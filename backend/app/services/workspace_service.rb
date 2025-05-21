@@ -41,10 +41,10 @@ class WorkspaceService
     
     tasks_query = workspace.tasks.includes(:user)
     tasks_query = apply_filters(tasks_query, filters)
-    tasks_query = apply_cursor_pagination(tasks_query, cursor)
+    tasks_query = Task.apply_cursor_pagination(tasks_query, cursor)
     
     tasks = tasks_query
-      .order(created_at: :desc, id: :desc)
+      .order(id: :desc)
       .limit(limit + 1)
     
     has_next = tasks.size > limit
@@ -55,7 +55,7 @@ class WorkspaceService
       task.as_json.merge('user' => full_name)
     end
     
-    next_cursor = has_next ? encode_cursor(tasks.last) : nil
+    next_cursor = has_next ? Task.encode_cursor(tasks.last) : nil
     
     {
       workspace: workspace.as_json(include: { users: { only: [:id, :last_name, :first_name] } }),
@@ -80,29 +80,5 @@ class WorkspaceService
     query = query.where(category: filters[:category]) if filters[:category].present?
     query = query.where(user_id: filters[:user_id]) if filters[:user_id].present?
     query
-  end
-
-  def self.apply_cursor_pagination(query, cursor)
-    return query if cursor.blank?
-    
-    cursor_data = decode_cursor(cursor)
-    created_at = cursor_data[:created_at]
-    last_id = cursor_data[:id]
-    
-    query.where('tasks.created_at < ? OR (tasks.created_at = ? AND tasks.id < ?)', 
-                created_at, created_at, last_id)
-  end
-
-  def self.encode_cursor(task)
-    cursor_data = {
-      id: task.id,
-      created_at: task.created_at
-    }
-    Base64.strict_encode64(cursor_data.to_json)
-  end
-
-  def self.decode_cursor(cursor)
-    decoded = Base64.strict_decode64(cursor)
-    JSON.parse(decoded, symbolize_names: true)
   end
 end 

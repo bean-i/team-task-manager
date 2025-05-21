@@ -21,4 +21,22 @@ class Task < ApplicationRecord
   validates :category, presence: true
   validates :user_id, presence: true
   validates :workspace_id, presence: true
+
+  def self.apply_cursor_pagination(query, cursor)
+    return query if cursor.blank?
+    last_id = cursor.to_i
+    query.where('tasks.id < ?', last_id)
+  end
+
+  def self.encode_cursor(task)
+    task.id.to_s
+  end
+
+  def self.decode_cursor(cursor)
+    cursor.to_i
+  end
+
+  def self.tasks_query
+    order(id: :desc)
+  end
 end 
