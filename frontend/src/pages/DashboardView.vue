@@ -5,30 +5,48 @@
     .sidebar-header
       span Workspaces
     ul.workspace-list
-      li.workspace-item(v-for="ws in workspaces" :key="ws.id" :class="{ active: ws.id === selectedWorkspace?.id }" @click="selectWorkspace(ws)") {{ ws.title }}
+      li.workspace-item(v-for="ws in workspaceStore.workspaces" :key="ws.id" :class="{ active: ws.id === workspaceStore.currentWorkspace?.id }" @click="selectWorkspace(ws)") {{ ws.title }}
   .main-content
     .header-bar
-      h2 {{ selectedWorkspace?.title || 'ワークスペースを選択してください' }}
+      h2 {{ workspaceStore.currentWorkspace?.title || 'ワークスペースを選択してください' }}
       button.logout-btn(@click="handleLogout") ログアウト
-    .task-section(v-if="selectedWorkspace")
-      .task-add-bar
-        button.add-task-btn(@click="showAddTaskModal = true") タスク追加
+    .progress-section(v-if="workspaceStore.currentWorkspace")
+      .section-header
+        h3.section-title 進捗率
+        button.member-progress-btn(@click="showMemberProgress = true") 全体の進捗
+      .progress-bars
+        .progress-bar-block
+          span.label 自分の進捗率
+          span.percent {{ progressStore.myProgressPercentage }}%
+          span.ratio {{ progressStore.myProgress?.done || 0 }}/{{ progressStore.myProgress?.total || 0 }}
+          .progress-bar-bg
+            .progress-bar-fill(:style="{ width: progressStore.myProgressPercentage + '%' }")
+        .progress-bar-block
+          span.label ワークスペース全体の進捗率
+          span.percent {{ progressStore.workspaceProgressPercentage }}%
+          span.ratio {{ progressStore.workspaceProgress?.done || 0 }}/{{ progressStore.workspaceProgress?.total || 0 }}
+          .progress-bar-bg
+            .progress-bar-fill(:style="{ width: progressStore.workspaceProgressPercentage + '%' }")
+    .section-header(v-if="workspaceStore.currentWorkspace")
+      h3.section-title タスク
+      button.add-task-btn(@click="showAddTaskModal = true") タスク追加
+    .task-section(v-if="workspaceStore.currentWorkspace")
       .task-filters
         .filter-group
           span.filter-label カテゴリー
           select(v-model="filters.category")
             option(value="") すべて
-            option(v-for="cat in TASK_CATEGORIES" :key="cat" :value="cat") {{ cat }}
+            option(v-for="cat in TASK_CATEGORIES" :key="cat.value" :value="cat.value") {{ cat.label }}
         .filter-group
           span.filter-label ステータス
           select(v-model="filters.status")
             option(value="") すべて
-            option(v-for="st in TASK_STATUSES" :key="st" :value="st") {{ st }}
+            option(v-for="st in TASK_STATUSES" :key="st.value" :value="st.value") {{ st.label }}
         .filter-group
           span.filter-label 担当者
           select(v-model="filters.user_id")
             option(value="") すべて
-            option(v-for="user in members" :key="user.id" :value="user.id") {{ user.last_name + ' ' + user.first_name }}
+            option(v-for="user in taskStore.members" :key="user.id" :value="user.id") {{ user.last_name + ' ' + user.first_name }}
       .task-table
         table
           thead
@@ -37,102 +55,78 @@
               th カテゴリー
               th ステータス
               th 担当者
+              th 操作
           transition-group(name="task-fade" tag="tbody")
-            tr(v-for="task in tasks" :key="task.id")
+            tr(v-for="task in taskStore.filteredTasks" :key="task.id")
               td {{ task.title }}
-              td {{ translateCategory(task.category) }}
-              td {{ translateStatus(task.status) }}
+              td
+                span(:class="['badge', 'cat-' + translateCategory(task.category)]") {{ translateCategory(task.category) }}
+              td
+                span(:class="['badge', 'status-' + translateStatus(task.status)]") {{ translateStatus(task.status) }}
               td {{ task.user }}
+              td
+                button.edit-btn(@click="openEditModal(task)") 編集
+                button.delete-btn(@click="deleteTask(task)") 削除
       .infinite-scroll-footer
-        div(v-if="isLoading" class="loading-text") ローディング中...
-        button.more-btn(v-else-if="nextCursor" @click="loadMore" :disabled="isLoading") もっと見る
-        div(v-else-if="tasks.length > 0" class="end-text") これ以上のタスクはありません
+        div(v-if="taskStore.loading" class="loading-text") ローディング中...
+        button.more-btn(
+          v-else-if="taskStore.nextCursor"
+          @click="taskStore.loadMore(workspaceStore.currentWorkspace.id)"
+          :disabled="taskStore.loading"
+        ) もっと見る
+        div(v-else-if="taskStore.tasks.length > 0" class="end-text") これ以上のタスクはありません
         div(v-else class="end-text") タスクがありません
-  TaskModal(:show="showAddTaskModal" :workspace-id="selectedWorkspace?.id" :categories="TASK_CATEGORIES" :statuses="TASK_STATUSES" @close="closeAddTaskModal" @success="onTaskAddSuccess")
+  TaskModal(:show="showAddTaskModal" :workspace-id="workspaceStore.currentWorkspace?.id" :categories="TASK_CATEGORIES" :statuses="TASK_STATUSES" @close="closeAddTaskModal" @success="onTaskAddSuccess")
+  TaskModal(:show="showEditTaskModal" :workspace-id="workspaceStore.currentWorkspace?.id" :categories="TASK_CATEGORIES" :statuses="TASK_STATUSES" :edit-task="editingTask" :is-edit="true" @close="closeEditTaskModal" @success="onTaskEditSuccess")
 </template>
 
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
-import api from '@/lib/axios'
 import TaskModal from '@/components/TaskModal.vue'
 import { TASK_CATEGORIES, TASK_STATUSES, translateCategory, translateStatus } from '@/models/task'
+import { useTaskStore } from '@/stores/task'
+import { useProgressStore } from '@/stores/progress'
+import { useWorkspaceStore } from '@/stores/workspace'
+import { taskAPI } from '@/api/task'
 
-const workspaces = ref([])
-const selectedWorkspace = ref(null)
-const tasks = ref([])
+const taskStore = useTaskStore()
+const progressStore = useProgressStore()
+const workspaceStore = useWorkspaceStore()
+
 const filters = reactive({ category: '', status: '', user_id: '' })
-const members = ref([])
-const nextCursor = ref(null)
-const isLoading = ref(false)
 const showAddTaskModal = ref(false)
-
-const fetchWorkspaces = async () => {
-  try {
-    const res = await api.get('/workspaces')
-    const ws = res.data?.data?.workspaces || []
-    workspaces.value = ws
-    if (!selectedWorkspace.value && workspaces.value.length > 0) {
-      selectWorkspace(workspaces.value[0])
-    }
-  } catch (e) {
-    console.error('Failed to fetch workspaces', e)
-  }
-}
+const showMemberProgress = ref(false)
+const editingTask = ref(null)
+const showEditTaskModal = ref(false)
 
 const selectWorkspace = async (ws) => {
-  selectedWorkspace.value = ws
+  await workspaceStore.setCurrentWorkspace(ws)
+  taskStore.setFilters({ category: '', status: '', user_id: '' })
   filters.category = ''
   filters.status = ''
   filters.user_id = ''
-  tasks.value = []
-  nextCursor.value = null
-  await fetchTasks()
-}
-
-const fetchTasks = async (cursor = null, append = false) => {
-  if (!selectedWorkspace.value) return
-  if (isLoading.value) return
-  isLoading.value = true
-  try {
-    let params = { ...filters }
-    if (cursor) params.cursor = cursor
-    const res = await api.get(`/workspaces/${selectedWorkspace.value.id}`, { params })
-    const newTasks = res.data.data.tasks
-    console.log('newTasks:', newTasks)
-    if (append) {
-      const existingIds = new Set(tasks.value.map(t => t.id))
-      const filtered = newTasks.filter(t => !existingIds.has(t.id))
-      console.log('filtered:', filtered)
-      tasks.value = tasks.value.concat(filtered)
-    } else {
-      tasks.value = newTasks
-    }
-    nextCursor.value = res.data.data.pagination?.next_cursor
-    console.log('Next Cursor:', nextCursor.value)
-    if (res.data.data.workspace && res.data.data.workspace.users) {
-      members.value = res.data.data.workspace.users
-    }
-  } catch (e) {
-    console.error('Failed to fetch tasks', e)
-  } finally {
-    isLoading.value = false
-  }
-}
-
-const loadMore = () => {
-  if (nextCursor.value && !isLoading.value) {
-    fetchTasks(nextCursor.value, true)
+  if (workspaceStore.currentWorkspace) {
+    await Promise.all([
+      taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
+      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+    ])
   }
 }
 
 watch(filters, () => {
-  tasks.value = []
-  nextCursor.value = null
-  fetchTasks()
+  if (workspaceStore.currentWorkspace) {
+    taskStore.setFilters(filters)
+    taskStore.fetchTasks(workspaceStore.currentWorkspace.id)
+  }
   window.scrollTo(0, 0)
 }, { deep: true })
 
-onMounted(fetchWorkspaces)
+onMounted(async () => {
+  await workspaceStore.fetchWorkspaces()
+  if (workspaceStore.workspaces.length > 0) {
+    selectWorkspace(workspaceStore.workspaces[0])
+  }
+})
 
 const handleLogout = () => {
   localStorage.removeItem('token')
@@ -144,10 +138,45 @@ const closeAddTaskModal = () => {
 }
 
 const onTaskAddSuccess = async () => {
-  tasks.value = []
-  nextCursor.value = null
+  if (workspaceStore.currentWorkspace) {
+    await Promise.all([
+      taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
+      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+    ])
+  }
   window.scrollTo(0, 0)
-  await fetchTasks()
+}
+
+const openEditModal = (task) => {
+  editingTask.value = { ...task }
+  showEditTaskModal.value = true
+}
+
+const closeEditTaskModal = () => {
+  showEditTaskModal.value = false
+  editingTask.value = null
+}
+
+const onTaskEditSuccess = async () => {
+  if (workspaceStore.currentWorkspace) {
+    await Promise.all([
+      taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
+      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+    ])
+  }
+  window.scrollTo(0, 0)
+}
+
+const deleteTask = async (task) => {
+  if (confirm('本当に削除しますか？')) {
+    try {
+      await taskAPI.deleteTask(workspaceStore.currentWorkspace.id, task.id)
+      await taskStore.fetchTasks(workspaceStore.currentWorkspace.id)
+      await progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+    } catch (e) {
+      alert('削除に失敗しました')
+    }
+  }
 }
 </script>
 
@@ -212,6 +241,7 @@ const onTaskAddSuccess = async () => {
   overflow-y: auto;
   width: 100%;
   box-sizing: border-box;
+  height: 100vh;
 }
 
 .header-bar {
@@ -235,6 +265,7 @@ const onTaskAddSuccess = async () => {
   border-radius: 8px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  margin-top: 0;
 }
 
 .task-add-bar {
@@ -399,4 +430,128 @@ const onTaskAddSuccess = async () => {
   opacity: 1;
   transform: translateY(0);
 }
+
+.progress-section {
+  margin-bottom: 32px;
+}
+.progress-bars {
+  display: flex;
+  gap: 48px;
+}
+.progress-bar-block {
+  min-width: 320px;
+  margin-bottom: 12px;
+}
+.progress-bar-block .label {
+  font-size: 18px;
+  font-weight: bold;
+  margin-right: 16px;
+}
+.progress-bar-block .percent {
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 12px;
+}
+.progress-bar-block .ratio {
+  font-size: 18px;
+  margin-left: 18px;
+}
+.progress-bar-bg {
+  width: 100%;
+  height: 36px;
+  background: #e5e7eb;
+  border-radius: 18px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: #666;
+  border-radius: 18px 0 0 18px;
+  transition: width 0.5s cubic-bezier(.55,0,.1,1);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 18px;
+  justify-content: flex-start;
+}
+.section-title {
+  font-size: 24px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #222;
+  margin: 0;
+}
+.member-progress-btn,
+.add-task-btn {
+  margin-left: 16px;
+}
+.member-progress-btn {
+  background: #444;
+  color: #fff;
+  border: none;
+  border-radius: 14px;
+  padding: 6px 24px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.member-progress-btn:hover {
+  background: #222;
+}
+
+.section-title + .task-section {
+  margin-top: 0;
+}
+
+.edit-btn {
+  background: #fff;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 15px;
+  margin-right: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.edit-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+.delete-btn {
+  background: #fff;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+.delete-btn:hover {
+  background: #ef4444;
+  color: #fff;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  margin-right: 2px;
+}
+.cat-企画 { background: #2563eb; }
+.cat-デザイン { background: #10b981; }
+.cat-フロントエンド { background: #f59e42; }
+.cat-バックエンド { background: #a855f7; }
+.cat-テスト { background: #f43f5e; }
+.status-未着手 { background: #6b7280; }
+.status-進行中 { background: #2563eb; }
+.status-完了 { background: #10b981; }
 </style>
