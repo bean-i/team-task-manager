@@ -1,6 +1,6 @@
 <template lang="pug">
 Modal(v-if="show" @close="emitClose")
-  h3 タスク追加
+  h3 {{ isEdit ? 'タスク編集' : 'タスク追加' }}
   form(@submit.prevent="submitTask")
     .form-group
       label タイトル
@@ -9,27 +9,36 @@ Modal(v-if="show" @close="emitClose")
       label カテゴリー
       select(v-model="newTask.category" required)
         option(value="") 選択してください
-        option(v-for="cat in TASK_CATEGORIES" :key="cat" :value="cat") {{ cat }}
+        option(v-for="cat in categories" :key="cat.value" :value="cat.value") {{ cat.label }}
     .form-group
       label ステータス
       select(v-model="newTask.status" required)
         option(value="") 選択してください
-        option(v-for="st in TASK_STATUSES" :key="st" :value="st") {{ st }}
+        option(v-for="st in statuses" :key="st.value" :value="st.value") {{ st.label }}
     .form-error(v-if="addTaskError") {{ addTaskError }}
     .form-actions
-      button(type="submit" :disabled="addTaskLoading") 追加
+      button(type="submit" :disabled="addTaskLoading") {{ isEdit ? '更新' : '追加' }}
       span(v-if="addTaskLoading" class="loading-text") ローディング中...
 </template>
 
 <script setup>
 import { reactive, ref, watch } from 'vue'
-import api from '@/lib/axios'
 import Modal from './Modal.vue'
-import { TASK_CATEGORIES, TASK_STATUSES } from '@/models/task'
+import { TASK_CATEGORIES, TASK_STATUSES, CATEGORY_MAP, STATUS_MAP } from '@/models/task'
+import { useTaskStore } from '@/stores/task'
+import { taskAPI } from '@/api/task'
+
+const taskStore = useTaskStore()
+
 const props = defineProps({
   show: Boolean,
-  workspaceId: Number
+  workspaceId: Number,
+  categories: Array,
+  statuses: Array,
+  isEdit: Boolean,
+  editTask: Object
 })
+
 const emit = defineEmits(['close', 'success'])
 const addTaskLoading = ref(false)
 const addTaskError = ref('')
@@ -44,6 +53,18 @@ const emitClose = () => {
   newTask.status = ''
 }
 
+watch(() => props.show, (val) => {
+  if (val && props.isEdit && props.editTask) {
+    newTask.title = props.editTask.title
+    newTask.category = props.editTask.category || ''
+    newTask.status = props.editTask.status || ''
+  } else if (!val) {
+    newTask.title = ''
+    newTask.category = ''
+    newTask.status = ''
+  }
+})
+
 const submitTask = async () => {
   if (!newTask.title || !newTask.category || !newTask.status) {
     addTaskError.value = '全ての項目を入力してください'
@@ -52,11 +73,19 @@ const submitTask = async () => {
   addTaskLoading.value = true
   addTaskError.value = ''
   try {
-    await api.post(`/workspaces/${props.workspaceId}/tasks`, {
-      title: newTask.title,
-      category: newTask.category,
-      status: newTask.status
-    })
+    if (props.isEdit && props.editTask) {
+      await taskAPI.updateTask(props.workspaceId, props.editTask.id, {
+        title: newTask.title,
+        category: newTask.category,
+        status: newTask.status
+      })
+    } else {
+      await taskAPI.createTask(props.workspaceId, {
+        title: newTask.title,
+        category: newTask.category,
+        status: newTask.status
+      })
+    }
     emitClose()
     emit('success')
   } catch (e) {
@@ -65,10 +94,6 @@ const submitTask = async () => {
     addTaskLoading.value = false
   }
 }
-
-watch(() => props.show, (val) => {
-  if (!val) emitClose()
-})
 </script>
 
 <style scoped>
