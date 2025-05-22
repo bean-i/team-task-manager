@@ -9,6 +9,10 @@
 /backend/tmp/*
 /backend/db/*.sqlite3
 /backend/db/*.sqlite3-journal
+/backend/db/*.sqlite3-*
+/backend/db/queue_schema.rb
+/backend/db/cache_schema.rb
+/backend/db/cable_schema.rb
 /backend/vendor
 /backend/.env
 /backend/.byebug_history
