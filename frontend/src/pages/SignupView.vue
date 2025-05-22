@@ -1,6 +1,7 @@
 <template lang="pug">
 .signup-container
   .signup-card
+    ErrorBanner(:message="authStore.errorBanner")
     h1.signup-title サインアップ
     
     form(@submit.prevent="handleSignup")
@@ -67,11 +68,13 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import SubmitButton from '../components/SubmitButton.vue'
+import ErrorBanner from '../components/ErrorBanner.vue'
 
 export default {
   name: 'SignupView',
   components: {
-    SubmitButton
+    SubmitButton,
+    ErrorBanner
   },
   setup() {
     const firstName = ref('')

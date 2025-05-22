@@ -1,5 +1,6 @@
 <template lang="pug">
 .dashboard-layout
+  ErrorBanner(:message="authStore.errorBanner")
   .sidebar
     .logo Team Task Manager
     .sidebar-header
@@ -98,6 +99,7 @@ import { ref, reactive, onMounted, watch, computed } from 'vue'
 import TaskModal from '@/components/TaskModal.vue'
 import MemberProgressModal from '@/components/MemberProgressModal.vue'
 import JoinWorkspaceModal from '@/components/JoinWorkspaceModal.vue'
+import ErrorBanner from '@/components/ErrorBanner.vue'
 import { TASK_CATEGORIES, TASK_STATUSES, translateCategory, translateStatus } from '@/models/task'
 import { useTaskStore } from '@/stores/task'
 import { useProgressStore } from '@/stores/progress'

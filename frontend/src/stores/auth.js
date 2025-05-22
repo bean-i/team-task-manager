@@ -1,12 +1,14 @@
 import { defineStore } from 'pinia'
 import { authAPI } from '@/api/auth'
+import { useErrorBanner } from '@/composables/useErrorBanner'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: JSON.parse(localStorage.getItem('user') || 'null'),
     token: localStorage.getItem('token'),
     loading: false,
-    error: null
+    error: null,
+    ...useErrorBanner()
   }),
 
   getters: {
@@ -18,19 +20,17 @@ export const useAuthStore = defineStore('auth', {
     async login(email, password) {
       this.loading = true
       this.error = null
-      
+      this.clearErrorBanner()
       try {
         const response = await authAPI.login({ email, password })
         const { token, user } = response.data.data
-        
         this.token = token
         this.user = user
         localStorage.setItem('token', token)
         localStorage.setItem('user', JSON.stringify(user))
-        
         return true
       } catch (error) {
-        this.error = error.response?.data?.message || 'ログインに失敗しました'
+        this.handleApiError(error)
         return false
       } finally {
         this.loading = false
@@ -40,6 +40,7 @@ export const useAuthStore = defineStore('auth', {
     async signup(userData) {
       this.loading = true
       this.error = null
+      this.clearErrorBanner()
       
       try {
         const response = await authAPI.signup(userData)
@@ -54,7 +55,7 @@ export const useAuthStore = defineStore('auth', {
           throw new Error('Invalid response format')
         }
       } catch (error) {
-        this.error = error.response?.data?.message || 'ユーザー登録に失敗しました'
+        this.handleApiError(error)
         return false
       } finally {
         this.loading = false

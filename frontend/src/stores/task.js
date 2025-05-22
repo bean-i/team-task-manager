@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import api from '@/api/config'
 import { taskAPI } from '@/api/task'
+import { useErrorBanner } from '@/composables/useErrorBanner'
 
 export const useTaskStore = defineStore('task', {
   state: () => ({
@@ -14,7 +15,8 @@ export const useTaskStore = defineStore('task', {
       status: null,
       user_id: null,
       search: ''
-    }
+    },
+    ...useErrorBanner()
   }),
 
   getters: {
@@ -56,44 +58,59 @@ export const useTaskStore = defineStore('task', {
         this.error = err.message
         this.tasks = []
         this.members = []
+        this.handleApiError(err)
       } finally {
         this.loading = false
       }
     },
 
     async createTask(workspaceId, taskData) {
+      this.loading = true
       try {
         const response = await taskAPI.createTask(workspaceId, taskData)
-        this.tasks.push(response.data.task || response.data)
-        return response.data.task || response.data
+        this.tasks.push(response.data.data.task)
+        this.error = null
+        return response.data.data.task
       } catch (err) {
         this.error = err.message
-        throw err
+        this.handleApiError(err)
+        return null
+      } finally {
+        this.loading = false
       }
     },
 
     async updateTask(workspaceId, taskId, taskData) {
+      this.loading = true
       try {
         const response = await taskAPI.updateTask(workspaceId, taskId, taskData)
-        const updated = response.data.task || response.data
-        const index = this.tasks.findIndex(task => task.id === taskId)
-        if (index !== -1) {
-          this.tasks[index] = updated
-        }
-        return updated
+        const updatedTask = response.data.data.task
+        const idx = this.tasks.findIndex(t => t.id === updatedTask.id)
+        if (idx !== -1) this.tasks[idx] = updatedTask
+        this.error = null
+        return updatedTask
       } catch (err) {
         this.error = err.message
-        throw err
+        this.handleApiError(err)
+        return null
+      } finally {
+        this.loading = false
       }
     },
 
     async deleteTask(workspaceId, taskId) {
+      this.loading = true
       try {
         await taskAPI.deleteTask(workspaceId, taskId)
-        this.tasks = this.tasks.filter(task => task.id !== taskId)
+        this.tasks = this.tasks.filter(t => t.id !== taskId)
+        this.error = null
+        return true
       } catch (err) {
         this.error = err.message
-        throw err
+        this.handleApiError(err)
+        return false
+      } finally {
+        this.loading = false
       }
     },
 

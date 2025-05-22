@@ -1,6 +1,7 @@
 <template lang="pug">
 .login-container
   .login-card
+    ErrorBanner(:message="authStore.errorBanner")
     h1.login-title ログイン
     
     form(@submit.prevent="handleLogin")
@@ -50,11 +51,13 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import SubmitButton from '../components/SubmitButton.vue'
+import ErrorBanner from '../components/ErrorBanner.vue'
 
 export default {
   name: 'LoginView',
   components: {
-    SubmitButton
+    SubmitButton,
+    ErrorBanner
   },
   setup() {
     const email = ref('')

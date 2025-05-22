@@ -1,12 +1,15 @@
 import { defineStore } from 'pinia'
+import api from '@/api/config'
 import { workspaceAPI } from '@/api/workspace'
+import { useErrorBanner } from '@/composables/useErrorBanner'
 
 export const useWorkspaceStore = defineStore('workspace', {
   state: () => ({
     workspaces: [],
     currentWorkspace: null,
     loading: false,
-    error: null
+    error: null,
+    ...useErrorBanner()
   }),
   getters: {
     currentWorkspaceId: (state) => state.currentWorkspace?.id,
@@ -17,11 +20,12 @@ export const useWorkspaceStore = defineStore('workspace', {
       this.loading = true
       try {
         const response = await workspaceAPI.fetchWorkspaces()
-        this.workspaces = response.data.data?.workspaces || []
+        this.workspaces = response.data.data.workspaces || []
         this.error = null
       } catch (err) {
         this.error = err.message
         this.workspaces = []
+        this.handleApiError(err)
       } finally {
         this.loading = false
       }
@@ -39,11 +43,8 @@ export const useWorkspaceStore = defineStore('workspace', {
         this.loading = false
       }
     },
-    async setCurrentWorkspace(workspace) {
-      this.currentWorkspace = workspace
-      if (workspace) {
-        await this.fetchWorkspace(workspace.id)
-      }
+    async setCurrentWorkspace(ws) {
+      this.currentWorkspace = ws
     }
   }
 })
