@@ -4,18 +4,16 @@ class AuthController < ApplicationController
     user, token = AuthService.signup(signup_params)
 
     render_success(
-      message: "ユーザー登録に成功しました",
+      message: "Sign up succeeded",
       data: {
-              user: user,
-              token: token,
-            },
+        user: user
+      },
       status: :created,
     )
   rescue => e
     render_error(
       message: e.message,
-      code: 422,
-      status: :unprocessable_entity,
+      status: :unprocessable_entity
     )
   end
 

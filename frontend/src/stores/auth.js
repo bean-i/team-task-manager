@@ -3,7 +3,7 @@ import { authAPI } from '@/api/auth'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    user: JSON.parse(localStorage.getItem('user') || 'null'),
     token: localStorage.getItem('token'),
     loading: false,
     error: null
@@ -26,6 +26,7 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         this.user = user
         localStorage.setItem('token', token)
+        localStorage.setItem('user', JSON.stringify(user))
         
         return true
       } catch (error) {
@@ -47,6 +48,7 @@ export const useAuthStore = defineStore('auth', {
           this.token = token
           this.user = user
           localStorage.setItem('token', token)
+          localStorage.setItem('user', JSON.stringify(user))
           return true
         } else {
           throw new Error('Invalid response format')
@@ -63,6 +65,7 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       this.token = null
       localStorage.removeItem('token')
+      localStorage.removeItem('user')
     }
   }
 }) 

@@ -123,7 +123,8 @@ export default {
         email: email.value,
         password: password.value
       })) {
-        router.push('/dashboard')
+        alert('会員登録が完了しました。ログインしてください。')
+        router.push('/login')
       }
     }
 
