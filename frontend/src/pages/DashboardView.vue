@@ -4,6 +4,7 @@
     .logo Team Task Manager
     .sidebar-header
       span Workspaces
+      button.add-ws-btn(@click="openJoinModal") ＋
     ul.workspace-list
       li.workspace-item(v-for="ws in workspaceStore.workspaces" :key="ws.id" :class="{ active: ws.id === workspaceStore.currentWorkspace?.id }" @click="selectWorkspace(ws)") {{ ws.title }}
   .main-content
@@ -13,20 +14,20 @@
     .progress-section(v-if="workspaceStore.currentWorkspace")
       .section-header
         h3.section-title 進捗率
-        button.member-progress-btn(@click="showMemberProgress = true") 全体の進捗
+        button.member-progress-btn(@click="openMemberProgressModal") 全体の進捗
       .progress-bars
         .progress-bar-block
           span.label 自分の進捗率
-          span.percent {{ progressStore.myProgressPercentage }}%
-          span.ratio {{ progressStore.myProgress?.done || 0 }}/{{ progressStore.myProgress?.total || 0 }}
+          span.percent {{ mySummary.percent || 0 }}%
+          span.ratio {{ mySummary.done || 0 }}/{{ mySummary.total || 0 }}
           .progress-bar-bg
-            .progress-bar-fill(:style="{ width: progressStore.myProgressPercentage + '%' }")
+            .progress-bar-fill(:style="{ width: (mySummary.percent || 0) + '%' }")
         .progress-bar-block
           span.label ワークスペース全体の進捗率
-          span.percent {{ progressStore.workspaceProgressPercentage }}%
-          span.ratio {{ progressStore.workspaceProgress?.done || 0 }}/{{ progressStore.workspaceProgress?.total || 0 }}
+          span.percent {{ workspaceSummary.percent || 0 }}%
+          span.ratio {{ workspaceSummary.done || 0 }}/{{ workspaceSummary.total || 0 }}
           .progress-bar-bg
-            .progress-bar-fill(:style="{ width: progressStore.workspaceProgressPercentage + '%' }")
+            .progress-bar-fill(:style="{ width: (workspaceSummary.percent || 0) + '%' }")
     .section-header(v-if="workspaceStore.currentWorkspace")
       h3.section-title タスク
       button.add-task-btn(@click="showAddTaskModal = true") タスク追加
@@ -51,13 +52,15 @@
         table
           thead
             tr
+              th No
               th タスク
               th カテゴリー
               th ステータス
               th 担当者
               th 操作
           transition-group(name="task-fade" tag="tbody")
-            tr(v-for="task in taskStore.filteredTasks" :key="task.id")
+            tr(v-for="(task, idx) in taskStore.filteredTasks" :key="task.id")
+              td.center {{ idx + 1 }}
               td {{ task.title }}
               td
                 span(:class="['badge', 'cat-' + translateCategory(task.category)]") {{ translateCategory(task.category) }}
@@ -78,26 +81,44 @@
         div(v-else class="end-text") タスクがありません
   TaskModal(:show="showAddTaskModal" :workspace-id="workspaceStore.currentWorkspace?.id" :categories="TASK_CATEGORIES" :statuses="TASK_STATUSES" @close="closeAddTaskModal" @success="onTaskAddSuccess")
   TaskModal(:show="showEditTaskModal" :workspace-id="workspaceStore.currentWorkspace?.id" :categories="TASK_CATEGORIES" :statuses="TASK_STATUSES" :edit-task="editingTask" :is-edit="true" @close="closeEditTaskModal" @success="onTaskEditSuccess")
+  MemberProgressModal(:show="showMemberProgress" :summary-list="progressStore.summaryList" @close="showMemberProgress = false")
+  JoinWorkspaceModal(
+    :show="showJoinModal"
+    :workspaces="availableWorkspaces"
+    :tab="tab"
+    @update:tab="tab = $event"
+    @close="showJoinModal = false"
+    @join="handleJoinWorkspace"
+    @create="handleCreateWorkspace"
+  )
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, watch } from 'vue'
+import { ref, reactive, onMounted, watch, computed } from 'vue'
 import TaskModal from '@/components/TaskModal.vue'
+import MemberProgressModal from '@/components/MemberProgressModal.vue'
+import JoinWorkspaceModal from '@/components/JoinWorkspaceModal.vue'
 import { TASK_CATEGORIES, TASK_STATUSES, translateCategory, translateStatus } from '@/models/task'
 import { useTaskStore } from '@/stores/task'
 import { useProgressStore } from '@/stores/progress'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { taskAPI } from '@/api/task'
+import { workspaceAPI } from '@/api/workspace'
+import { useAuthStore } from '@/stores/auth'
 
 const taskStore = useTaskStore()
 const progressStore = useProgressStore()
 const workspaceStore = useWorkspaceStore()
+const authStore = useAuthStore()
 
 const filters = reactive({ category: '', status: '', user_id: '' })
 const showAddTaskModal = ref(false)
 const showMemberProgress = ref(false)
 const editingTask = ref(null)
 const showEditTaskModal = ref(false)
+const showJoinModal = ref(false)
+const availableWorkspaces = ref([])
+const tab = ref('join')
 
 const selectWorkspace = async (ws) => {
   await workspaceStore.setCurrentWorkspace(ws)
@@ -108,7 +129,7 @@ const selectWorkspace = async (ws) => {
   if (workspaceStore.currentWorkspace) {
     await Promise.all([
       taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
-      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+      progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
     ])
   }
 }
@@ -141,7 +162,7 @@ const onTaskAddSuccess = async () => {
   if (workspaceStore.currentWorkspace) {
     await Promise.all([
       taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
-      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+      progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
     ])
   }
   window.scrollTo(0, 0)
@@ -161,7 +182,7 @@ const onTaskEditSuccess = async () => {
   if (workspaceStore.currentWorkspace) {
     await Promise.all([
       taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
-      progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+      progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
     ])
   }
   window.scrollTo(0, 0)
@@ -172,12 +193,58 @@ const deleteTask = async (task) => {
     try {
       await taskAPI.deleteTask(workspaceStore.currentWorkspace.id, task.id)
       await taskStore.fetchTasks(workspaceStore.currentWorkspace.id)
-      await progressStore.refreshAllProgress(workspaceStore.currentWorkspace.id)
+      await progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
     } catch (e) {
       alert('削除に失敗しました')
     }
   }
 }
+
+const openMemberProgressModal = async () => {
+  if (workspaceStore.currentWorkspace) {
+    await progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
+    showMemberProgress.value = true
+  }
+}
+
+const openJoinModal = async () => {
+  const res = await workspaceAPI.fetchAvailableWorkspaces()
+  availableWorkspaces.value = res.data.data.workspaces || []
+  showJoinModal.value = true
+}
+
+const handleJoinWorkspace = async (id) => {
+  await workspaceAPI.joinWorkspace(id)
+  await workspaceStore.fetchWorkspaces()
+  showJoinModal.value = false
+}
+
+const handleCreateWorkspace = async (title) => {
+  try {
+    await workspaceAPI.createWorkspace({ title })
+    alert('ワークスペースが作成されました')
+    await workspaceStore.fetchWorkspaces()
+    const res = await workspaceAPI.fetchAvailableWorkspaces()
+    availableWorkspaces.value = res.data.data.workspaces || []
+    showJoinModal.value = false
+    tab.value = 'join'
+  } catch (e) {
+    alert('作成に失敗しました')
+  }
+}
+
+const mySummary = computed(() => {
+  return progressStore.summaryList.find(s => String(s.user_id) === String(authStore.user?.id)) || {}
+})
+const workspaceSummary = computed(() => {
+  const totalSummary = progressStore.summaryList.find(s => s.user_id === null)
+  if (!totalSummary) return {}
+  return {
+    done: totalSummary.done,
+    total: totalSummary.total,
+    percent: totalSummary.percent
+  }
+})
 </script>
 
 <style scoped>
@@ -328,6 +395,10 @@ const deleteTask = async (task) => {
   border: 1px solid #e5e7eb;
   padding: 8px 12px;
   text-align: left;
+}
+
+.task-table tbody tr:hover {
+  background: #f1f5f9;
 }
 
 .infinite-scroll-footer {
@@ -554,4 +625,30 @@ const deleteTask = async (task) => {
 .status-未着手 { background: #6b7280; }
 .status-進行中 { background: #2563eb; }
 .status-完了 { background: #10b981; }
+
+.task-table th:first-child,
+.task-table td.center {
+  text-align: center;
+  width: 48px;
+}
+
+.add-ws-btn {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.add-ws-btn:hover {
+  background: #1741a6;
+}
 </style>

@@ -12,5 +12,8 @@ export const workspaceAPI = {
   },
   joinWorkspace(id) {
     return api.post(`/workspaces/${id}/join`)
+  },
+  fetchAvailableWorkspaces() {
+    return api.get('/workspaces/available')
   }
 }
