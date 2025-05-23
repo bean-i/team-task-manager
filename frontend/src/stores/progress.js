@@ -15,7 +15,7 @@ export const useProgressStore = defineStore('progress', {
       this.loading = true
       try {
         const response = await progressAPI.fetchProgressSummary(workspaceId)
-        this.summaryList = response.data.data.summaryList || []
+        this.summaryList = response.data.data.summaries || []
         this.error = null
       } catch (err) {
         this.error = err.message
