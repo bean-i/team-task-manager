@@ -492,14 +492,19 @@ const workspaceSummary = computed(() => {
   gap: 12px;
 }
 
-.task-fade-enter-active, .task-fade-leave-active {
-  transition: all 0.4s cubic-bezier(.55,0,.1,1);
+.task-fade-enter-active,
+.task-fade-leave-active {
+  transition: all 0.4s cubic-bezier(.55, 0, .1, 1);
 }
-.task-fade-enter-from, .task-fade-leave-to {
+
+.task-fade-enter-from,
+.task-fade-leave-to {
   opacity: 0;
   transform: translateY(20px);
 }
-.task-fade-enter-to, .task-fade-leave-from {
+
+.task-fade-enter-to,
+.task-fade-leave-from {
   opacity: 1;
   transform: translateY(0);
 }
@@ -507,28 +512,34 @@ const workspaceSummary = computed(() => {
 .progress-section {
   margin-bottom: 32px;
 }
+
 .progress-bars {
   display: flex;
   gap: 48px;
 }
+
 .progress-bar-block {
   min-width: 320px;
   margin-bottom: 12px;
 }
+
 .progress-bar-block .label {
   font-size: 18px;
   font-weight: bold;
   margin-right: 16px;
 }
+
 .progress-bar-block .percent {
   font-size: 20px;
   font-weight: bold;
   margin-left: 12px;
 }
+
 .progress-bar-block .ratio {
   font-size: 18px;
   margin-left: 18px;
 }
+
 .progress-bar-bg {
   width: 100%;
   height: 36px;
@@ -537,11 +548,12 @@ const workspaceSummary = computed(() => {
   margin-top: 8px;
   overflow: hidden;
 }
+
 .progress-bar-fill {
   height: 100%;
   background: #666;
   border-radius: 18px 0 0 18px;
-  transition: width 0.5s cubic-bezier(.55,0,.1,1);
+  transition: width 0.5s cubic-bezier(.55, 0, .1, 1);
 }
 
 .section-header {
@@ -550,6 +562,7 @@ const workspaceSummary = computed(() => {
   margin-bottom: 18px;
   justify-content: flex-start;
 }
+
 .section-title {
   font-size: 24px;
   font-weight: bold;
@@ -557,10 +570,12 @@ const workspaceSummary = computed(() => {
   color: #222;
   margin: 0;
 }
+
 .member-progress-btn,
 .add-task-btn {
   margin-left: 16px;
 }
+
 .member-progress-btn {
   background: #444;
   color: #fff;
@@ -572,11 +587,12 @@ const workspaceSummary = computed(() => {
   cursor: pointer;
   transition: background 0.2s;
 }
+
 .member-progress-btn:hover {
   background: #222;
 }
 
-.section-title + .task-section {
+.section-title+.task-section {
   margin-top: 0;
 }
 
@@ -591,10 +607,12 @@ const workspaceSummary = computed(() => {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
+
 .edit-btn:hover {
   background: #2563eb;
   color: #fff;
 }
+
 .delete-btn {
   background: #fff;
   color: #ef4444;
@@ -605,6 +623,7 @@ const workspaceSummary = computed(() => {
   cursor: pointer;
   transition: background 0.2s, color 0.2s;
 }
+
 .delete-btn:hover {
   background: #ef4444;
   color: #fff;
@@ -619,14 +638,38 @@ const workspaceSummary = computed(() => {
   color: #fff;
   margin-right: 2px;
 }
-.cat-企画 { background: #2563eb; }
-.cat-デザイン { background: #10b981; }
-.cat-フロントエンド { background: #f59e42; }
-.cat-バックエンド { background: #a855f7; }
-.cat-テスト { background: #f43f5e; }
-.status-未着手 { background: #6b7280; }
-.status-進行中 { background: #2563eb; }
-.status-完了 { background: #10b981; }
+
+.cat-企画 {
+  background: #2563eb;
+}
+
+.cat-デザイン {
+  background: #10b981;
+}
+
+.cat-フロントエンド {
+  background: #f59e42;
+}
+
+.cat-バックエンド {
+  background: #a855f7;
+}
+
+.cat-テスト {
+  background: #f43f5e;
+}
+
+.status-未着手 {
+  background: #6b7280;
+}
+
+.status-進行中 {
+  background: #2563eb;
+}
+
+.status-完了 {
+  background: #10b981;
+}
 
 .task-table th:first-child,
 .task-table td.center {
@@ -650,6 +693,7 @@ const workspaceSummary = computed(() => {
   justify-content: center;
   transition: background 0.2s;
 }
+
 .add-ws-btn:hover {
   background: #1741a6;
 }
