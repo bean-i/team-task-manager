@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { authAPI } from '@/api/auth'
 import { useErrorBanner } from '@/composables/useErrorBanner'
+import router from '@/router'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -45,11 +46,7 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await authAPI.signup(userData)
         if (response.data.status === 'success') {
-          const { user, token } = response.data.data
-          this.token = token
-          this.user = user
-          localStorage.setItem('token', token)
-          localStorage.setItem('user', JSON.stringify(user))
+          router.push('/login')
           return true
         } else {
           throw new Error('Invalid response format')

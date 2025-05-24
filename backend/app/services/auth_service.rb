@@ -6,7 +6,7 @@ class AuthService
 
     ActiveRecord::Base.transaction do
       if User.exists?(email: params[:email])
-        raise StandardError.new("Email is already in use.")
+        raise StandardError.new("このメールアドレスは既に使用されています。")
       end
       user = User.create!(
         first_name: params[:first_name],
@@ -23,7 +23,7 @@ class AuthService
   # Log In
   def self.login(params)
     user = User.find_by(email: params[:email])
-    raise StandardError.new("Email or password is incorrect.") unless user&.authenticate(params[:password])
+    raise CustomErrors::AuthenticationError.new("メールアドレスまたはパスワードが正しくありません。") unless user&.authenticate(params[:password])
     token = JsonWebToken.encode(user_id: user.id)
     [user, token]
   end
