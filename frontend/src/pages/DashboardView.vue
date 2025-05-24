@@ -16,6 +16,7 @@
       .section-header
         h3.section-title 進捗率
         button.member-progress-btn(@click="openMemberProgressModal") 全体の進捗
+        .progress-notice ※ 平日9時〜20時の間、5分ごとに自動更新されます
       .progress-bars
         .progress-bar-block
           span.label 自分の進捗率
@@ -714,5 +715,12 @@ const workspaceSummary = computed(() => {
 
 .add-ws-btn:hover {
   background: #1741a6;
+}
+
+.progress-notice {
+  font-size: 13px;
+  color: #888;
+  margin-top: 4px;
+  margin-left: 8px;
 }
 </style>
