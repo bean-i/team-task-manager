@@ -3,12 +3,16 @@ import { ref } from 'vue'
 export function useErrorBanner() {
   const errorBanner = ref(null)
 
+  function setErrorBanner(message) {
+    errorBanner.value = message
+  }
+
   function handleApiError(error) {
     const status = error.response?.status
     const message = error.response?.data?.message || 'サーバーエラーが発生しました。'
+    
     if (status === 401) {
-      errorBanner.value = '認証が必要です。再度ログインしてください。'
-      // 필요시 로그아웃 등 추가
+      errorBanner.value = message
     } else if (status === 403) {
       errorBanner.value = '権限がありません。'
     } else if (status === 404) {
@@ -26,5 +30,5 @@ export function useErrorBanner() {
     errorBanner.value = null
   }
 
-  return { errorBanner, handleApiError, clearErrorBanner }
+  return { errorBanner, handleApiError, clearErrorBanner, setErrorBanner }
 } 

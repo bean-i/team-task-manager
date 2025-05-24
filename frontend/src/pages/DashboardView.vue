@@ -1,6 +1,6 @@
 <template lang="pug">
 .dashboard-layout
-  ErrorBanner(:message="authStore.errorBanner")
+  ErrorBanner(:message="authStore.errorBanner || workspaceStore.errorBanner || taskStore.errorBanner")
   .sidebar
     .logo Team Task Manager
     .sidebar-header
@@ -69,8 +69,14 @@
                 span(:class="['badge', 'status-' + translateStatus(task.status)]") {{ translateStatus(task.status) }}
               td {{ task.user }}
               td
-                button.edit-btn(@click="openEditModal(task)") 編集
-                button.delete-btn(@click="deleteTask(task)") 削除
+                button.edit-btn(
+                  v-if="task.user_id === authStore.user?.id"
+                  @click="openEditModal(task)"
+                ) 編集
+                button.delete-btn(
+                  v-if="task.user_id === authStore.user?.id"
+                  @click="deleteTask(task)"
+                ) 削除
       .infinite-scroll-footer
         div(v-if="taskStore.loading" class="loading-text") ローディング中...
         button.more-btn(
@@ -123,16 +129,21 @@ const availableWorkspaces = ref([])
 const tab = ref('join')
 
 const selectWorkspace = async (ws) => {
-  await workspaceStore.setCurrentWorkspace(ws)
-  taskStore.setFilters({ category: '', status: '', user_id: '' })
-  filters.category = ''
-  filters.status = ''
-  filters.user_id = ''
-  if (workspaceStore.currentWorkspace) {
-    await Promise.all([
-      taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
-      progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
-    ])
+  try {
+    await workspaceStore.setCurrentWorkspace(ws)
+    taskStore.setFilters({ category: '', status: '', user_id: '' })
+    filters.category = ''
+    filters.status = ''
+    filters.user_id = ''
+    if (workspaceStore.currentWorkspace) {
+      await Promise.all([
+        taskStore.fetchTasks(workspaceStore.currentWorkspace.id),
+        progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
+      ])
+    }
+  } catch (error) {
+    console.error('ワークスペースの読み込みに失敗しました:', error)
+    authStore.setErrorBanner(error.response?.data?.message || 'サーバーエラーが発生しました')
   }
 }
 
@@ -196,8 +207,9 @@ const deleteTask = async (task) => {
       await taskAPI.deleteTask(workspaceStore.currentWorkspace.id, task.id)
       await taskStore.fetchTasks(workspaceStore.currentWorkspace.id)
       await progressStore.fetchProgressSummary(workspaceStore.currentWorkspace.id)
-    } catch (e) {
-      alert('削除に失敗しました')
+    } catch (error) {
+      console.error('タスクの削除に失敗しました:', error)
+      authStore.setErrorBanner(error.response?.data?.message || 'サーバーエラーが発生しました')
     }
   }
 }
@@ -216,9 +228,14 @@ const openJoinModal = async () => {
 }
 
 const handleJoinWorkspace = async (id) => {
-  await workspaceAPI.joinWorkspace(id)
-  await workspaceStore.fetchWorkspaces()
-  showJoinModal.value = false
+  try {
+    await workspaceAPI.joinWorkspace(id)
+    await workspaceStore.fetchWorkspaces()
+    showJoinModal.value = false
+  } catch (error) {
+    console.error('ワークスペースへの参加に失敗しました:', error)
+    authStore.setErrorBanner(error.response?.data?.message || 'サーバーエラーが発生しました')
+  }
 }
 
 const handleCreateWorkspace = async (title) => {
@@ -230,8 +247,9 @@ const handleCreateWorkspace = async (title) => {
     availableWorkspaces.value = res.data.data.workspaces || []
     showJoinModal.value = false
     tab.value = 'join'
-  } catch (e) {
-    alert('作成に失敗しました')
+  } catch (error) {
+    console.error('ワークスペースの作成に失敗しました:', error)
+    authStore.setErrorBanner(error.response?.data?.message || 'サーバーエラーが発生しました')
   }
 }
 

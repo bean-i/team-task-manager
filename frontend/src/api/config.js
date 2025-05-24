@@ -20,7 +20,20 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   response => response,
   error => {
+    if (!error.response) {
+      return Promise.reject({
+        response: {
+          data: {
+            message: 'サーバーに接続できません。ネットワーク接続を確認してください。'
+          }
+        }
+      })
+    }
+    
     if (error.response?.status === 401) {
+      if (router.currentRoute.value.path === '/login') {
+        return Promise.reject(error)
+      }
       const authStore = useAuthStore()
       authStore.logout()
       router.push('/login')
