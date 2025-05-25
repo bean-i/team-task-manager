@@ -119,18 +119,6 @@ bundle exec rspec
 ```
 
 ## 🎞 動作動画
-
-| 機能 | 動画リンク |
-|------|------------|
-| 1. ユーザー登録・ログイン | [こちら](https://github.com/user-attachments/assets/4ee30376-9fc3-4256-9321-e64e7267aea3) |
-| 2. サイドバー操作（一覧表示・作成・参加・ログアウト） | [こちら](https://github.com/user-attachments/assets/1b8c4415-5888-43e9-b25d-a1d8fc35f854) |
-| 3. 進捗率の確認 | [こちら](https://github.com/user-attachments/assets/02f6a4b1-6870-4290-9f2c-0ae9aa392bc3) |
-| 4. タスクの作成・編集・削除 | [こちら](https://github.com/user-attachments/assets/f172bdb5-0977-4aac-96ab-2a6f7233c4fb) |
-| 5. タスク一覧 | [こちら](https://github.com/user-attachments/assets/7aef2ae3-efd6-434b-9fe7-709ddcad03d0) |
-| 6. タスクフィルタ | [こちら](https://github.com/user-attachments/assets/84a88160-0fb5-47ad-a889-ac9dc7a43f38) |
-
-
-## 🎞 動作動画
 ### 1. ユーザー登録・ログイン
 https://github.com/user-attachments/assets/4ee30376-9fc3-4256-9321-e64e7267aea3
 
