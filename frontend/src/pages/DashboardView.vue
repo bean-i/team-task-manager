@@ -8,10 +8,11 @@
       button.add-ws-btn(@click="openJoinModal") ＋
     ul.workspace-list
       li.workspace-item(v-for="ws in workspaceStore.workspaces" :key="ws.id" :class="{ active: ws.id === workspaceStore.currentWorkspace?.id }" @click="selectWorkspace(ws)") {{ ws.title }}
+    .sidebar-logout
+      button.logout-btn(@click="handleLogout") ログアウト
   .main-content
     .header-bar
       h2 {{ workspaceStore.currentWorkspace?.title || 'ワークスペースを選択してください' }}
-      button.logout-btn(@click="handleLogout") ログアウト
     .progress-section(v-if="workspaceStore.currentWorkspace")
       .section-header
         h3.section-title 進捗率
@@ -295,6 +296,7 @@ const workspaceSummary = computed(() => {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  position: relative;
 }
 
 .logo {
@@ -330,6 +332,13 @@ const workspaceSummary = computed(() => {
 .workspace-item.active,
 .workspace-item:hover {
   background: #e5e7eb;
+}
+
+.sidebar-logout {
+  margin-top: auto;
+  padding: 24px;
+  display: flex;
+  justify-content: flex-start;
 }
 
 .main-content {
