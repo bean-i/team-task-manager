@@ -164,8 +164,10 @@ onMounted(async () => {
 })
 
 const handleLogout = () => {
-  localStorage.removeItem('token')
-  window.location.href = '/login'
+  if (window.confirm('本当にログアウトしますか？')) {
+    localStorage.removeItem('token')
+    window.location.href = '/login'
+  }
 }
 
 const closeAddTaskModal = () => {
@@ -232,6 +234,10 @@ const handleJoinWorkspace = async (id) => {
   try {
     await workspaceAPI.joinWorkspace(id)
     await workspaceStore.fetchWorkspaces()
+    const joined = workspaceStore.workspaces.find(ws => ws.id === id)
+    if (joined) {
+      await selectWorkspace(joined)
+    }
     showJoinModal.value = false
   } catch (error) {
     console.error('ワークスペースへの参加に失敗しました:', error)
@@ -244,6 +250,10 @@ const handleCreateWorkspace = async (title) => {
     await workspaceAPI.createWorkspace({ title })
     alert('ワークスペースが作成されました')
     await workspaceStore.fetchWorkspaces()
+    const created = workspaceStore.workspaces.find(ws => ws.title === title)
+    if (created) {
+      await selectWorkspace(created)
+    }
     const res = await workspaceAPI.fetchAvailableWorkspaces()
     availableWorkspaces.value = res.data.data.workspaces || []
     showJoinModal.value = false
